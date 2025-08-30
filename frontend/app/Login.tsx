@@ -24,12 +24,11 @@ const LoginScreen = () => {
         password
       });
 
-      if (response.data.status) {
+
+        console.log(response.data.auth_token);
+        
         await AsyncStorage.setItem('auth_token', response.data.auth_token);
         alert('Login Successfull');
-      } else {
-        Alert.alert('Error', response.data.message || 'Login failed');
-      }
     } catch (error) {
       console.error('Login error:', error);
       let errorMessage = 'Unable to login, please try again later';

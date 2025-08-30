@@ -47,12 +47,10 @@ const RegisterScreen = () => {
         password
       });
 
-      if (response.data.status) {
+    console.log(response.data.auth_token);
+
         await AsyncStorage.setItem('auth_token', response.data.auth_token);
         alert('Registration successful');
-      } else {
-        Alert.alert('Error', response.data.message || 'Registration failed');
-      }
     } catch (error) {
       console.error('Registration error:', error);
       let errorMessage = 'Unable to register, please try again later';

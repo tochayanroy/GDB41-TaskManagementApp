@@ -49,20 +49,116 @@ const TasksScreen = () => {
 		applyFilters();
 	}, [tasks, selectedStatus, selectedPriority, selectedWeek]);
 
+	// call functions
 	const fetchTasks = async () => {
 		const auth_token = await AsyncStorage.getItem('auth_token');
 		setLoading(true);
 		try {
-			const response = await axios.get('http://192.168.0.105:5000/task/get-all-task', {
+			const response = await axios.get('http://192.168.0.105:5000/task/getAllTask', {
 				headers: {
 					Authorization: `Bearer ${auth_token}`
 				}
 			});
-			setTasks(response.data.tasks);
+			console.log(response.data);
+
+			setTasks(response.data);
 		} catch (error) {
 			Alert.alert('Error', error.response?.data?.error || 'Failed to fetch tasks');
 		} finally {
 			setLoading(false);
+		}
+	};
+
+	const createTask = async () => {
+		const auth_token = await AsyncStorage.getItem('auth_token');
+
+		if (!formData.title) {
+			Alert.alert('Error', 'Title is required');
+			return;
+		}
+
+		try {
+			const response = await axios.post('http://192.168.0.105:5000/task/createTask', formData, {
+				headers: {
+					Authorization: `Bearer ${auth_token}`
+				}
+			});
+			setTasks([response.data, ...tasks]);
+			setModalVisible(false);
+			resetForm();
+		} catch (error) {
+			Alert.alert('Error', error.response?.data?.error || 'Failed to create task');
+		}
+	};
+
+	const updateTask = async () => {
+		const auth_token = await AsyncStorage.getItem('auth_token');
+
+		try {
+			const updateData = {
+				title: formData.title,
+				description: formData.description,
+				status: formData.status,
+				priority: formData.priority,
+				lastUpdateDate: new Date(),
+				dueDate: formData.dueDate
+			};
+
+			const response = await axios.put(
+				`http://192.168.0.105:5000/task/updateTask/${editingTask._id}`,
+				updateData,
+				{
+					headers: {
+						Authorization: `Bearer ${auth_token}`
+					}
+				}
+			);
+			setTasks(tasks.map(task =>
+				task._id === editingTask._id ? response.data : task
+			));
+			setModalVisible(false);
+			resetForm();
+		} catch (error) {
+			Alert.alert('Error', error.response?.data?.error || 'Failed to update task');
+		}
+	};
+
+	const deleteTask = async (taskId) => {
+		const auth_token = await AsyncStorage.getItem('auth_token');
+
+		try {
+			await axios.delete(`http://192.168.0.105:5000/task/deleteTask/${taskId}`, {
+				headers: {
+					Authorization: `Bearer ${auth_token}`
+				}
+			});
+			setTasks(tasks.filter(task => task._id !== taskId));
+		} catch (error) {
+			Alert.alert('Error', error.response?.data?.error || 'Failed to delete task');
+		}
+	};
+
+	const shareTask = async () => {
+		const auth_token = await AsyncStorage.getItem('auth_token');
+		if (!shareEmail) {
+			Alert.alert('Error', 'Please enter an email address');
+			return;
+		}
+
+		try {
+			await axios.post('http://192.168.0.105:5000/task/shareTask', {
+				taskId: editingTask?._id,
+				email: shareEmail,
+				access: shareAccess
+			}, {
+				headers: {
+					Authorization: `Bearer ${auth_token}`
+				}
+			});
+			Alert.alert('Success', 'Task shared successfully');
+			setShareEmail('');
+		} catch (error) {
+			Alert.alert('Error', error.response?.data?.error || 'Failed to share task');
 		}
 	};
 
@@ -91,99 +187,6 @@ const TasksScreen = () => {
 		}
 
 		setFilteredTasks(result);
-	};
-
-	const handleCreateTask = async () => {
-		const auth_token = await AsyncStorage.getItem('auth_token');
-
-		if (!formData.title) {
-			Alert.alert('Error', 'Title is required');
-			return;
-		}
-
-		try {
-			const response = await axios.post('http://192.168.0.105:5000/task/create-task', formData, {
-				headers: {
-					Authorization: `Bearer ${auth_token}`
-				}
-			});
-			setTasks([response.data.task, ...tasks]);
-			setModalVisible(false);
-			resetForm();
-		} catch (error) {
-			Alert.alert('Error', error.response?.data?.error || 'Failed to create task');
-		}
-	};
-
-	const handleUpdateTask = async () => {
-		const auth_token = await AsyncStorage.getItem('auth_token');
-
-		try {
-			const updateData = {
-				title: formData.title,
-				description: formData.description,
-				status: formData.status,
-				priority: formData.priority,
-				lastUpdateDate: new Date(),
-				dueDate: formData.dueDate
-			};
-
-			const response = await axios.put(
-				`http://192.168.0.105:5000/task/update-task/${editingTask._id}`,
-				updateData,
-				{
-					headers: {
-						Authorization: `Bearer ${auth_token}`
-					}
-				}
-			);
-			setTasks(tasks.map(task =>
-				task._id === editingTask._id ? response.data.task : task
-			));
-			setModalVisible(false);
-			resetForm();
-		} catch (error) {
-			Alert.alert('Error', error.response?.data?.error || 'Failed to update task');
-		}
-	};
-
-	const handleDeleteTask = async (taskId) => {
-		const auth_token = await AsyncStorage.getItem('auth_token');
-
-		try {
-			await axios.delete(`http://192.168.0.105:5000/task/delete-task/${taskId}`, {
-				headers: {
-					Authorization: `Bearer ${auth_token}`
-				}
-			});
-			setTasks(tasks.filter(task => task._id !== taskId));
-		} catch (error) {
-			Alert.alert('Error', error.response?.data?.error || 'Failed to delete task');
-		}
-	};
-
-	const handleShareTask = async () => {
-		const auth_token = await AsyncStorage.getItem('auth_token');
-		if (!shareEmail) {
-			Alert.alert('Error', 'Please enter an email address');
-			return;
-		}
-
-		try {
-			await axios.post('http://192.168.0.105:5000/task/share-task', {
-				taskId: editingTask?._id,
-				email: shareEmail,
-				access: shareAccess
-			}, {
-				headers: {
-					Authorization: `Bearer ${auth_token}`
-				}
-			});
-			Alert.alert('Success', 'Task shared successfully');
-			setShareEmail('');
-		} catch (error) {
-			Alert.alert('Error', error.response?.data?.error || 'Failed to share task');
-		}
 	};
 
 	const resetForm = () => {
@@ -275,7 +278,6 @@ const TasksScreen = () => {
 		setFilterModalVisible(false);
 	};
 
-
 	return (
 		<View style={styles.container}>
 			{/* Filter Header */}
@@ -315,7 +317,7 @@ const TasksScreen = () => {
 							<TaskCard
 								item={item}
 								openEditModal={openEditModal}
-								handleDeleteTask={handleDeleteTask}
+								handleDeleteTask={deleteTask}
 								formatDate={formatDate}
 							/>
 						</TouchableOpacity>
@@ -524,7 +526,7 @@ const TasksScreen = () => {
 						{showDueDatePicker && (
 							<DateTimePicker
 								value={formData.dueDate}
-								mode="datetime"
+								mode="datetime"  // Changed from 'datetime' to "datetime"
 								display="default"
 								onChange={(event, date) => handleDateChange('due', event, date)}
 							/>
@@ -570,34 +572,6 @@ const TasksScreen = () => {
 							</View>
 						</View>
 
-						{/* <View style={styles.shareOptions}>
-							<TextInput
-								style={styles.input}
-								placeholder="Enter email address"
-								value={shareEmail}
-								onChangeText={setShareEmail}
-								keyboardType="email-address"
-								autoCapitalize="none"
-							/>
-							<View style={styles.shareInputArea}>
-								<Picker
-									selectedValue={shareAccess}
-									onValueChange={(itemValue) => setShareAccess(itemValue)}
-									style={styles.accessPicker}
-								>
-									<Picker.Item label="View Only" value="view" />
-									<Picker.Item label="Can Edit" value="edit" />
-								</Picker>
-								<TouchableOpacity
-									style={styles.shareButton}
-									onPress={handleShareTask}
-								>
-									<MaterialIcons name="share" size={24} color="#2196F3" />
-									<Text style={styles.shareButtonText}>Share Task</Text>
-								</TouchableOpacity>
-							</View>
-						</View> */}
-
 						<View style={styles.modalButtons}>
 							<TouchableOpacity
 								style={[styles.modalButton, styles.cancelButton]}
@@ -611,7 +585,7 @@ const TasksScreen = () => {
 
 							<TouchableOpacity
 								style={[styles.modalButton, styles.submitButton]}
-								onPress={editingTask ? handleUpdateTask : handleCreateTask}
+								onPress={editingTask ? updateTask : createTask}
 							>
 								<Text style={[styles.buttonText, { color: 'white' }]}>
 									{editingTask ? 'Update' : 'Create'}
